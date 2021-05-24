@@ -1,8 +1,8 @@
 import dynamic from 'next/dynamic';
 import React, { PropsWithChildren, useEffect, useState } from "react";
+import { AppleWalletServiceProvider, useAppleWallet } from '../services/apple-wallet.provider';
 import { getJwtContent } from "../utils/jwt";
 
-const Popup = dynamic(() => import('reactjs-popup'), { ssr: false });
 // @ts-ignore
 const QrScanner = dynamic(() => import('react-qr-scanner'), { ssr: false });
 
@@ -33,6 +33,8 @@ function ScanRow(
     }
 ) {
     const [isScannerPopupOpen, setScannerPopupOpen] = useState<boolean>(false);
+
+    const [facingMode, setFacingMode] = useState<boolean>(false);
 
     const [qrText, localSetQrText] = useState<string | undefined>();
     function setQrText(text?: string) {
@@ -84,7 +86,8 @@ function ScanRow(
             >QR kód beolvasása</button>
         }
         {
-            isScannerPopupOpen && <QrScanner
+            isScannerPopupOpen &&
+            <QrScanner
                 // @ts-ignore
                 onScan={
                     (result?: { text?: string; }) => {
@@ -94,7 +97,8 @@ function ScanRow(
                         }
                     }
                 }
-
+                onClick={() => setFacingMode(!facingMode)}
+                facingMode={facingMode ? 'front' : 'rear'}
                 onError={(e: any) => { console.log(e) }}
             ></QrScanner>
         }
@@ -165,6 +169,8 @@ function FormRow({ qrData }: { qrData: PhysicalCardData | DigitalCardData }) {
         setDateOfFirstVaccination(new Date(digitalCardData.vd));
     }, [qrData]);
 
+    const x = useAppleWallet();
+
     if (!qrData) {
         return <></>;
     }
@@ -215,6 +221,7 @@ function FormRow({ qrData }: { qrData: PhysicalCardData | DigitalCardData }) {
                     (isPhysical && name && idCardNumber && dateOfFirstVaccination) ||
                     (!isPhysical && name && tajNumber && dateOfFirstVaccination)
                 )}
+                onClick={() => x?.createPackageToSign()}
                 className="text-white bg-indigo-500 border-0 py-2 px-6 focus:outline-none hover:bg-indigo-600 rounded text-lg w-full mt-4"
             >Wallet Pass letöltése</button>
         </div>
@@ -234,17 +241,22 @@ function Form() {
 
 
 function CovidPassPage() {
-    return <PageWrapper>
-        <div className="flex flex-col min-h-screen">
-            <div className="flex flex-col flex-grow">
-                <Headline />
-                <Form />
+    return <AppleWalletServiceProvider createPackageToSign={async () => {
+        alert('boop');
+        return 'boop';
+    }}>
+        <PageWrapper>
+            <div className="flex flex-col min-h-screen">
+                <div className="flex flex-col flex-grow">
+                    <Headline />
+                    <Form />
+                </div>
+                <div className="flex-grow-0 flex-shrink-0">
+                    <PrivacyNotice />
+                </div>
             </div>
-            <div className="flex-grow-0 flex-shrink-0">
-                <PrivacyNotice />
-            </div>
-        </div>
-    </PageWrapper>;
+        </PageWrapper>
+    </AppleWalletServiceProvider>;
 }
 
 export default CovidPassPage;
