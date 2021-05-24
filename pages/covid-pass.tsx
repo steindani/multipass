@@ -3,6 +3,7 @@ import React, { PropsWithChildren, useEffect, useState } from "react";
 import { getJwtContent } from "../utils/jwt";
 
 const Popup = dynamic(() => import('reactjs-popup'), { ssr: false });
+// @ts-ignore
 const QrScanner = dynamic(() => import('react-qr-scanner'), { ssr: false });
 
 function PageWrapper(props: PropsWithChildren<{}>) {
@@ -27,14 +28,14 @@ function PrivacyNotice() {
 
 function ScanRow(
     params: {
-        setQrText: (qrText: string) => void;
-        setQrData: (qrData?: any) => void;
+        setQrText: React.Dispatch<React.SetStateAction<string | undefined>>;
+        setQrData: React.Dispatch<React.SetStateAction<any>>;
     }
 ) {
     const [isScannerPopupOpen, setScannerPopupOpen] = useState<boolean>(false);
 
     const [qrText, localSetQrText] = useState<string | undefined>();
-    function setQrText(text: string) {
+    function setQrText(text?: string) {
         localSetQrText(text);
         params.setQrText(text);
     }
@@ -42,7 +43,7 @@ function ScanRow(
     const [jwt, setJwt] = useState<string | undefined>();
     useEffect(() => {
         if (!qrText) {
-            params.setQrData();
+            params.setQrData(undefined);
             return;
         }
 
@@ -84,15 +85,17 @@ function ScanRow(
         }
         {
             isScannerPopupOpen && <QrScanner
+                // @ts-ignore
                 onScan={
-                    result => {
+                    (result?: { text?: string; }) => {
                         setQrText(result?.text);
                         if (result?.text) {
                             setScannerPopupOpen(false);
                         }
                     }
                 }
-                onError={e => { console.log(e) }}
+
+                onError={(e: any) => { console.log(e) }}
             ></QrScanner>
         }
     </div>;
@@ -149,7 +152,7 @@ function FormRow({ qrData }: { qrData: PhysicalCardData | DigitalCardData }) {
             return;
         }
 
-        const physical = !!qrData['iss'];
+        const physical = ('iis' in qrData);
         setIsPhysical(physical);
 
         if (physical) {
@@ -163,7 +166,7 @@ function FormRow({ qrData }: { qrData: PhysicalCardData | DigitalCardData }) {
     }, [qrData]);
 
     if (!qrData) {
-        return;
+        return <></>;
     }
 
     return <div>
@@ -219,8 +222,8 @@ function FormRow({ qrData }: { qrData: PhysicalCardData | DigitalCardData }) {
 }
 
 function Form() {
-    const [qrData, setQrData] = useState();
-    const [qrText, setQrText] = useState();
+    const [qrData, setQrData] = useState<any | undefined>();
+    const [qrText, setQrText] = useState<string | undefined>();
 
     return <div>
         {/* <pre>{JSON.stringify(qrData, null, 2)}</pre> */}
