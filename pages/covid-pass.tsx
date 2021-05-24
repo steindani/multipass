@@ -34,7 +34,22 @@ function ScanRow(
 ) {
     const [isScannerPopupOpen, setScannerPopupOpen] = useState<boolean>(false);
 
-    const [facingMode, setFacingMode] = useState<boolean>(false);
+    const [permissionGranted, setPermissionGranted] = useState(false);
+
+    const detectCamera = async () => {
+        await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+        await navigator.mediaDevices.enumerateDevices();
+
+        setPermissionGranted(true);
+    };
+
+    useEffect(() => {
+        if (!isScannerPopupOpen) {
+            return;
+        }
+
+        detectCamera();
+    }, [isScannerPopupOpen]);
 
     const [qrText, localSetQrText] = useState<string | undefined>();
     function setQrText(text?: string) {
@@ -86,7 +101,7 @@ function ScanRow(
             >QR kód beolvasása</button>
         }
         {
-            isScannerPopupOpen &&
+            isScannerPopupOpen && permissionGranted &&
             <QrScanner
                 // @ts-ignore
                 onScan={
@@ -97,8 +112,7 @@ function ScanRow(
                         }
                     }
                 }
-                onClick={() => setFacingMode(!facingMode)}
-                facingMode={facingMode ? 'front' : 'rear'}
+                facingMode="rear"
                 onError={(e: any) => { console.log(e) }}
             ></QrScanner>
         }
