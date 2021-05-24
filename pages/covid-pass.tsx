@@ -3,8 +3,7 @@ import React, { PropsWithChildren, useEffect, useState } from "react";
 import { AppleWalletServiceProvider, useAppleWallet } from '../services/apple-wallet.provider';
 import { getJwtContent } from "../utils/jwt";
 
-// @ts-ignore
-const QrScanner = dynamic(() => import('react-qr-scanner'), { ssr: false });
+const QrReader = dynamic(() => import('react-qr-reader'), { ssr: false });
 
 function PageWrapper(props: PropsWithChildren<{}>) {
     return <div className="container mx-auto px-4 max-w-sm">
@@ -102,19 +101,17 @@ function ScanRow(
         }
         {
             isScannerPopupOpen && permissionGranted &&
-            <QrScanner
-                // @ts-ignore
+            <QrReader
                 onScan={
-                    (result?: { text?: string; }) => {
-                        setQrText(result?.text);
-                        if (result?.text) {
+                    (result: string | null) => {
+                        setQrText(result ?? undefined);
+                        if (result) {
                             setScannerPopupOpen(false);
                         }
                     }
                 }
-                facingMode="rear"
                 onError={(e: any) => { console.log(e) }}
-            ></QrScanner>
+            ></QrReader>
         }
     </div>;
 }
@@ -136,7 +133,7 @@ function FormRow({ qrData }: { qrData: PhysicalCardData | DigitalCardData }) {
     const [passportNumber, setPassportNumber] = useState<string>();
     const [idCardNumber, setIdCardNumber] = useState<string>();
     const [tajNumber, setTajNumber] = useState<string>();
-    const [dateOfFirstVaccination, setDateOfFirstVaccination] = useState<Date>();
+    const [dateOfFirstVaccination, setDateOfFirstVaccination] = useState<string>();
 
     const nameProps = {
         value: name,
@@ -159,8 +156,20 @@ function FormRow({ qrData }: { qrData: PhysicalCardData | DigitalCardData }) {
     };
 
     const shotProps = {
-        value: dateOfFirstVaccination?.toISOString().split("T")[0],
-        onChange: (event: React.FormEvent<HTMLInputElement>) => setDateOfFirstVaccination(new Date(event.currentTarget.value)),
+        value: dateOfFirstVaccination,
+        onChange: (event: React.FormEvent<HTMLInputElement>) => {
+            const value = event.currentTarget.value;
+            if (!value) {
+                return;
+            }
+
+            const date = new Date(value).toISOString().split("T")[0];
+            if (dateOfFirstVaccination === date) {
+                return;
+            }
+
+            setDateOfFirstVaccination(value);
+        }
     };
 
     const [isPhysical, setIsPhysical] = useState<boolean>();
@@ -170,7 +179,7 @@ function FormRow({ qrData }: { qrData: PhysicalCardData | DigitalCardData }) {
             return;
         }
 
-        const physical = ('iis' in qrData);
+        const physical = qrData.hasOwnProperty('iss');
         setIsPhysical(physical);
 
         if (physical) {
@@ -180,7 +189,7 @@ function FormRow({ qrData }: { qrData: PhysicalCardData | DigitalCardData }) {
         const digitalCardData = qrData as DigitalCardData;
         setName(digitalCardData.n);
         setTajNumber(digitalCardData.id);
-        setDateOfFirstVaccination(new Date(digitalCardData.vd));
+        setDateOfFirstVaccination(new Date(digitalCardData.vd).toISOString().split("T")[0]);
     }, [qrData]);
 
     const x = useAppleWallet();
